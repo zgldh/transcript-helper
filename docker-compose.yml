@@ -1,0 +1,11 @@
+# Run zgldh/funasr and zgldh/ollama:llama3.1
+version: "3.8"
+services:
+  funasr:
+    image: zgldh/funasr:funasr-runtime-cpu-0.4.5-loaded-tail
+    ports:
+      - "10095:10095"
+  ollama:
+    image: zgldh/ollama:llama3.1
+    ports:
+      - "11434:11434"
