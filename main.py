@@ -6,6 +6,7 @@ import gradio as gr
 funasrHost = "127.0.0.1"
 funasrPort = "10095"
 ollamaEndpoint = "127.0.0.1:11434"
+ollamaModel = "llama3.1"
 defaultPrompt = "请凝练总结出上述文本内容。要有条理，用语准确精练。"
 
 
@@ -44,7 +45,11 @@ def summarize(raw_text, prompt):
         "curl",
         "http://" + ollamaEndpoint + "/api/generate",
         "-d",
-        '{"model":"llama3.1","stream":false,"prompt":"' + promptPayload + '"}',
+        '{"model":"'
+        + ollamaModel
+        + '","stream":false,"prompt":"'
+        + promptPayload
+        + '"}',
     ]
     print("Starting transcription process... ")
     result = subprocess.run(cmd, check=True, capture_output=True, text=True)
