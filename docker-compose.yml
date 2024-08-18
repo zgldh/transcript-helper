@@ -3,6 +3,7 @@ version: "3.8"
 services:
   funasr:
     image: zgldh/funasr:funasr-runtime-cpu-0.4.5-loaded-tail
+    privileged: true
     ports:
       - "10095:10095"
   ollama:
