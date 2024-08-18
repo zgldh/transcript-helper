@@ -1,5 +1,4 @@
 # Run zgldh/funasr and zgldh/ollama:llama3.1
-version: "3.8"
 services:
   funasr:
     image: zgldh/funasr:funasr-runtime-cpu-0.4.5-loaded-tail
@@ -10,3 +9,13 @@ services:
     image: zgldh/ollama:llama3.1
     ports:
       - "11434:11434"
+  gradio:
+    image: zgldh/transcript-helper:1.1
+    environment:
+      - FUNASR_HOST=funasr
+      - FUNASR_PORT=10095
+      - OLLAMA_ENDPOINT=ollama:11434
+      - OLLAMA_MODEL=llama3.1
+      - GRADIO_SERVER_NAME=0.0.0.0
+    ports:
+      - "7860:7860"
