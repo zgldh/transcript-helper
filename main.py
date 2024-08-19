@@ -6,6 +6,7 @@ import gradio as gr
 # Load from env, default 127.0.0.1
 funasrHost = os.environ.get("FUNASR_HOST", "127.0.0.1")
 funasrPort = os.environ.get("FUNASR_PORT", "10095")
+funasrSSL = os.environ.get("FUNASR_SSL", "0")
 ollamaEndpoint = os.environ.get("OLLAMA_ENDPOINT", "127.0.0.1:11434")
 ollamaModel = os.environ.get("OLLAMA_MODEL", "llama3.1")
 defaultPrompt = os.environ.get(
@@ -40,7 +41,7 @@ def transcript(files):
         "--mode",
         "offline",
         "--ssl",
-        "0",
+        funasrSSL,
         "--audio_in",
         newFile,
     ]

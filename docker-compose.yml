@@ -10,10 +10,11 @@ services:
     ports:
       - "11434:11434"
   gradio:
-    image: zgldh/transcript-helper:1.2
+    image: zgldh/transcript-helper:1.3
     environment:
       - FUNASR_HOST=funasr
       - FUNASR_PORT=10095
+      - FUNASR_SSL=0
       - OLLAMA_ENDPOINT=ollama:11434
       - OLLAMA_MODEL=llama3.1
       - GRADIO_SERVER_NAME=0.0.0.0
