@@ -1,7 +1,12 @@
 import json
 import os
+import shutil
 import subprocess
 import gradio as gr
+from ollama import Client
+import ollama
+
+version = "1.3"
 
 # Load from env, default 127.0.0.1
 funasrHost = os.environ.get("FUNASR_HOST", "127.0.0.1")
@@ -22,12 +27,22 @@ defaultPrompt = os.environ.get(
 请确保总结中包含所有关键信息，同时去除重复或不相关的细节。总结应该清晰、有条理，并易于理解。对话中可能有多个主题，不要遗漏任何一个。""",
 )
 
+ollamaClient = Client(host="http://" + ollamaEndpoint)
+
+
+def format_millis_to_time(millis):
+    seconds, millis = divmod(millis, 1000)
+    minutes, seconds = divmod(seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+    return f"{hours:02}:{minutes:02}:{seconds:02}"
+
+
+transcriptContent = ""
+
 
 def transcript(files):
     # Change files name to "audio.mp3"
-    parts = files.split("/")
-    parts[-1] = "audio.mp3"
-    newFile = "/".join(parts)
+    newFile = os.path.dirname(files) + "/" + "audio.mp3"
     os.rename(files, newFile)
 
     # Call another python script to get the transcript
@@ -45,68 +60,56 @@ def transcript(files):
         "--audio_in",
         newFile,
     ]
+    transcriptContent = ""
     print("Starting transcription process... " + newFile)
 
     result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+    rows = json.loads(result.stdout.split("|||end|||")[0])
+    # Loop rows
+    for data in rows:
+        # data["start"] is in milliseconds, convert to hh:mm:ss format
+        startTime = format_millis_to_time(data["start"])
+        # Get text_seg and remove all inner spaces
+        text = data["text_seg"].replace(" ", "")
+        punc = data["punc"]
+        if text != "":
+            # Add start time to text
+            text = startTime + " " + text + punc
+            # Add text to result
+            transcriptContent += text + "\n"
+
     print("Transcription completed.")
-
-    # Get string between "|start|" and "|end|"
-    transcriptContent = result.stdout.split("|start|")[1].split("|end|")[0]
-
     return transcriptContent
 
 
 summarizedContent = ""
+
+
 def summarize(raw_text, prompt):
     if raw_text == "":
         return "请先上传音频，得到转写文本。"
     promptPayload = raw_text + " " + prompt
-    payload = json.dumps(
-        {
-            "model": ollamaModel,
-            "stream": True,
-            "prompt": promptPayload,
-            "options": {"num_ctx": 32000},
-        }
-    )
-    cmd = [
-        "curl",
-        "http://" + ollamaEndpoint + "/api/generate",
-        "-d",
-        payload,
-    ]
     summarizedContent = ""
-    print("Starting transcription process... ")
-    process = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
-    )
 
-    # 循环读取输出
+    print("Starting summarize process... ")
     try:
-        while True:
-            # 读取一行输出
-            output = process.stdout.readline()
-            if output == "" and process.poll() is not None:
-                break
-            if output:
-                print(output.strip())  # 打印输出，去掉末尾的换行符
-                data = json.loads(output.strip())
-                summarizedContent += data["response"]
-                yield summarizedContent
-    except KeyboardInterrupt:
-        # 处理键盘中断，例如Ctrl+C
-        process.kill()
-        summarizedContent += "\nInterrupted"
-        yield summarizedContent
-    finally:
-        # 等待进程结束
-        process.wait()
-        print("Transcription completed. ")
-        summarizedContent += "\n(End)"
+        stream = ollamaClient.generate(
+            model=ollamaModel,
+            prompt=promptPayload,
+            stream=True,
+            options={"num_ctx": 32000},
+        )
+
+        for chunk in stream:
+            summarizedContent += chunk["response"]
+            yield summarizedContent
+    except ollama.ResponseError as e:
+        print("Error:", e.error)
+        summarizedContent += e.error
         yield summarizedContent
 
 
-with gr.Blocks() as demo:
+with gr.Blocks(title="Transcript Helper " + version) as demo:
     gr.Markdown("上传音频文件，生成转写文本，并且做出总结。")
     with gr.Column():
         with gr.Row():
