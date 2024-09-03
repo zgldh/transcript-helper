@@ -1,12 +1,12 @@
 import json
 import os
-import shutil
+import re
 import subprocess
 import gradio as gr
 from ollama import Client
 import ollama
 
-version = "1.3"
+version = "1.4"
 
 # Load from env, default 127.0.0.1
 funasrHost = os.environ.get("FUNASR_HOST", "127.0.0.1")
@@ -37,8 +37,12 @@ def format_millis_to_time(millis):
     return f"{hours:02}:{minutes:02}:{seconds:02}"
 
 
-transcriptContent = ""
+# Get text_seg and remove all inner spaces between CJK characters.
+def remove_cjk_spaces(text):
+    # 使用正则表达式匹配CJK字符之间的空格，并将其替换为空字符串
+    return re.sub(r'(?<=[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]) ', '', text)
 
+transcriptContent = ""
 
 def transcript(files):
     # Change files name to "audio.mp3"
@@ -69,8 +73,8 @@ def transcript(files):
     for data in rows:
         # data["start"] is in milliseconds, convert to hh:mm:ss format
         startTime = format_millis_to_time(data["start"])
-        # Get text_seg and remove all inner spaces
-        text = data["text_seg"].replace(" ", "")
+        # Get text_seg and remove all inner spaces between CJK characters.
+        text = remove_cjk_spaces(data["text_seg"])
         punc = data["punc"]
         if text != "":
             # Add start time to text
@@ -97,7 +101,7 @@ def summarize(raw_text, prompt):
             model=ollamaModel,
             prompt=promptPayload,
             stream=True,
-            options={"num_ctx": 32000},
+            options={"num_ctx": 64000},
         )
 
         for chunk in stream:

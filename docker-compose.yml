@@ -10,7 +10,7 @@ services:
     ports:
       - "11434:11434"
   gradio:
-    image: zgldh/transcript-helper:1.3
+    image: zgldh/transcript-helper:1.4
     environment:
       - FUNASR_HOST=funasr
       - FUNASR_PORT=10095
